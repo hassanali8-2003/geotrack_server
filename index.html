@@ -105,12 +105,16 @@
         document.getElementById('server-url').innerText = socketUrl;
 
         function resolveSocketUrl() {
+            // Priority 1: Check if running via ngrok or production domain
+            if (window.location.hostname.includes('ngrok') || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+                return window.location.origin;
+            }
+
             const params = new URLSearchParams(window.location.search);
             const queryValue = params.get('socketUrl');
             if (queryValue) return queryValue;
             if (window.location.port === '3000') return window.location.origin;
-            const hostname = window.location.hostname || 'localhost';
-            return `http://${hostname}:3000`;
+            return 'https://caption-woven-chirpy.ngrok-free.dev';
         }
 
         function setConnectionStatus(connected) {
@@ -146,6 +150,8 @@
                 strokeWeight: 2,
             };
         }
+
+        const polylines = new Map();
 
         function updateDetails(device) {
             if (!device) {
@@ -279,6 +285,25 @@
                 } else {
                     marker.setPosition(position);
                     marker.setIcon(markerIcon(device));
+                }
+
+                // Update History Polyline (Breadcrumbs)
+                if (device.history && device.history.length > 1) {
+                    const path = device.history.map(h => ({ lat: Number(h.lat), lng: Number(h.lng) }));
+                    let line = polylines.get(device.deviceId);
+                    if (!line) {
+                        line = new google.maps.Polyline({
+                            path: path,
+                            geodesic: true,
+                            strokeColor: device.isOnline ? '#6C63FF' : '#7E859B',
+                            strokeOpacity: 0.4,
+                            strokeWeight: 4,
+                            map: map
+                        });
+                        polylines.set(device.deviceId, line);
+                    } else {
+                        line.setPath(path);
+                    }
                 }
 
                 bounds.extend(position);

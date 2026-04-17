@@ -142,18 +142,31 @@ io.on('connection', (socket) => {
         }
 
         const previous = trackedDevices.get(deviceId) || {};
+        const history = previous.history || [];
+
+        const newLocation = {
+            lat: Number(data?.lat),
+            lng: Number(data?.lng),
+            timestamp: data?.timestamp || new Date().toISOString()
+        };
+
+        // Add to history and keep last 100 points
+        history.push(newLocation);
+        if (history.length > 100) history.shift();
+
         const device = {
             ...previous,
             deviceId,
             deviceName: String(data?.deviceName || previous.deviceName || deviceId),
             platform: String(data?.platform || previous.platform || 'unknown'),
-            lat: Number(data?.lat),
-            lng: Number(data?.lng),
+            lat: newLocation.lat,
+            lng: newLocation.lng,
             accuracy: data?.accuracy == null ? null : Number(data.accuracy),
             speed: data?.speed == null ? null : Number(data.speed),
-            timestamp: data?.timestamp || new Date().toISOString(),
+            timestamp: newLocation.timestamp,
             socketId: socket.id,
             isOnline: true,
+            history: history
         };
 
         // Geofence check
